@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File List</title>
+  <style>
+    .file-card {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .file-name {
+      flex: 1;
+    }
+    .button-container {
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>File List for User "test"</h1>
+  <div id="fileList"></div>
+  <script>
+    // Replace 'your_token_here' with the actual authorization token
+    const userid = localStorage.getItem('userId');
+    // Create a headers object with the Authorization header
+    const headers = new Headers({
+      'Authorization': localStorage.getItem('token')
+    });
+
+    fetch(`https://codecollabserver.onrender.com/api/files/${userid}`, {
+      method: 'GET',
+      headers: headers
+    })
+      .then(response => response.json())
+      .then(files => {
+        const fileList = document.getElementById('fileList');
+        if (files.length === 0) {
+          fileList.textContent = 'No files found';
+          return;
+        }
+
+        files.forEach(file => {
+          const fileCard = document.createElement('div');
+          fileCard.classList.add('file-card');
+
+          const fileName = document.createElement('div');
+          fileName.classList.add('file-name');
+          fileName.textContent = file.fileName;
+
+          const buttonContainer = document.createElement('div');
+          buttonContainer.classList.add('button-container');
+
+          const viewButton = document.createElement('button');
+          viewButton.textContent = 'View';
+          viewButton.addEventListener('click', () => {
+            window.open(file.fileUrl, '_blank');
+          });
+
+          const editButton = document.createElement('button');
+          editButton.textContent = 'Edit';
+          if(file.fileType === 'file') {
+            editButton.disabled = true;
+          }
+          else{
+            viewButton.disabled = true;
+          }
+          editButton.addEventListener('click', () => {
+            // Add logic to edit the file content
+            window.location.href = `codeeditor.html?fileId=${file._id}`;
+          });
+
+          buttonContainer.appendChild(viewButton);
+          buttonContainer.appendChild(editButton);
+
+          fileCard.appendChild(fileName);
+          fileCard.appendChild(buttonContainer);
+
+          fileList.appendChild(fileCard);
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching files:', error);
+      });
+  </script>
+</body>
+</html>

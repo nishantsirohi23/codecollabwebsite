@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Collaboration Platform</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Code Collaboration Platform</h1>
+  <div id="editor"></div>
+  <button id="replace-button">Save</button>
+  <button id="run-button">Run</button>
+  <div id="output"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.27.0/min/vs/loader.js"></script>
+  <script>
+    async function initEditor() {
+      function getQueryParam(param) {
+        const urlSearchParams = new URLSearchParams(window.location.search);
+        return urlSearchParams.get(param);
+      }
+
+      const fileDetailsDiv = document.getElementById('file-details');
+      const fileId = getQueryParam('fileId');
+
+      if (!fileId) {
+        console.error('File ID not found in URL');
+        return;
+      }
+
+      try {
+        // Fetch file details using the fileId
+        const token = localStorage.getItem('token'); // Get the authorization token from local storage
+        const response = await fetch(`https://codecollabserver.onrender.com/api/get-file/${fileId}`, {
+          headers: {
+            'Authorization': "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NGQ1ZmY3ZTBmNjlmYjE0MTEwMjQxODUiLCJpYXQiOjE2OTI4OTEzNzksImV4cCI6MTY5Mjg5NDk3OX0.Nk_CIJGl-r_w2O-2urC1bQ1kRHhGz58p-tGz4JZf-n4" // Add the authorization token with one space after 'Bearer'
+          }
+        });
+        const data = await response.json();
+        const file = data.file;
+
+        // Save fileUrl
+        const fileUrl = file.fileUrl;
+
+        // Initialize Monaco editor
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.27.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+          const editor = monaco.editor.create(document.getElementById('editor'), {
+            value: '// Start coding...',
+            language: 'python',
+            theme: 'vs-dark'
+          });
+
+          // Fetch file content and set it in the editor
+          fetch(fileUrl)
+            .then(response => response.text())
+            .then(fileContent => {
+              editor.setValue(fileContent);
+            })
+            .catch(error => {
+              console.error('Error fetching file content:', error);
+            });
+
+          const replaceButton = document.getElementById('replace-button');
+          replaceButton.addEventListener('click', () => {
+            const editorContent = editor.getValue();
+            deffunc(editorContent, fileId, token); // Pass the token to the deffunc function
+          });
+        });
+      } catch (error) {
+        console.error('Error fetching file details:', error);
+        fileDetailsDiv.innerHTML = 'Error fetching file details';
+      }
+    }
+
+    async function deffunc(newContent, fileId, token) {
+      const requestOptions = {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token // Add the authorization token with one space after 'Bearer'
+        },
+        body: JSON.stringify({ newContent })
+      };
+
+      try {
+        const response = await fetch(`https://codecollabserver.onrender.com/api/update-file/${fileId}`, requestOptions);
+        const data = await response.json();
+        console.log('File content updated:', data);
+        // You can handle success or display a success message here
+      } catch (error) {
+        console.error('Error updating file content:', error);
+        // You can handle error or display an error message here
+      }
+    }
+
+    // Initialize the editor and related operations
+    initEditor();
+  </script>
+</body>
+</html>

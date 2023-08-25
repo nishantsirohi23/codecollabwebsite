@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@genymotion/device-web-player": "^3.0.1"
+  }
+}
