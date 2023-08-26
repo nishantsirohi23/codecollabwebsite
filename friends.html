@@ -27,7 +27,7 @@
 
     // Function to add a friend by email
     function addFriendByEmail(email, userId) {
-      fetch(`http://localhost:5500/api/add-friend/${email}`, {
+      fetch(`https://codecollabserver.onrender.com/api/add-friend/${email}`, {
         method: 'POST',
         headers: {
           'Authorization': token,
