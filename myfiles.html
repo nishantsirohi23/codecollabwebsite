@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>File List</title>
   <style>
+    /* ... (your existing CSS styles) ... */
     .file-card {
       border: 1px solid #ccc;
       padding: 10px;
@@ -20,73 +21,234 @@
       display: flex;
       gap: 10px;
     }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.7);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 50%;
+      text-align: center;
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .close:hover {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .friend-item:hover {
+      cursor: pointer;
+      background-color: #f0f0f0;
+    }
   </style>
 </head>
 <body>
   <h1>File List for User "test"</h1>
-  <div id="fileList"></div>
+  <h2>Your Files</h2>
+  <div id="userFiles">
+    <h2>Your Files</h2>
+  </div>
+  <h2>Shared files</h2>
+  <div id="sharedFiles">
+    <h2>Shared Files</h2>
+  </div>
+  
+  <!-- Modal for displaying the list of friends -->
+  <div id="friendsModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Friends List</h2>
+      <ul id="friendsList"></ul>
+    </div>
+  </div>
+
   <script>
-    // Replace 'your_token_here' with the actual authorization token
     const userid = localStorage.getItem('userId');
-    // Create a headers object with the Authorization header
     const headers = new Headers({
       'Authorization': localStorage.getItem('token')
     });
 
-    fetch(`https://codecollabserver.onrender.com/api/files/${userid}`, {
-      method: 'GET',
-      headers: headers
-    })
-      .then(response => response.json())
-      .then(files => {
-        const fileList = document.getElementById('fileList');
-        if (files.length === 0) {
-          fileList.textContent = 'No files found';
-          return;
-        }
-
-        files.forEach(file => {
-          const fileCard = document.createElement('div');
-          fileCard.classList.add('file-card');
-
-          const fileName = document.createElement('div');
-          fileName.classList.add('file-name');
-          fileName.textContent = file.fileName;
-
-          const buttonContainer = document.createElement('div');
-          buttonContainer.classList.add('button-container');
-
-          const viewButton = document.createElement('button');
-          viewButton.textContent = 'View';
-          viewButton.addEventListener('click', () => {
-            window.open(file.fileUrl, '_blank');
-          });
-
-          const editButton = document.createElement('button');
-          editButton.textContent = 'Edit';
-          if(file.fileType === 'file') {
-            editButton.disabled = true;
-          }
-          else{
-            viewButton.disabled = true;
-          }
-          editButton.addEventListener('click', () => {
-            // Add logic to edit the file content
-            window.location.href = `codeeditor.html?fileId=${file._id}`;
-          });
-
-          buttonContainer.appendChild(viewButton);
-          buttonContainer.appendChild(editButton);
-
-          fileCard.appendChild(fileName);
-          fileCard.appendChild(buttonContainer);
-
-          fileList.appendChild(fileCard);
-        });
+    // Function to fetch and display files
+    function fetchAndDisplayFiles() {
+      // Fetch user's own files
+      fetch(`https://codecollabserver.onrender.com/api/files/${userid}`, {
+        method: 'GET',
+        headers: headers
       })
-      .catch(error => {
-        console.error('Error fetching files:', error);
+        .then(response => response.json())
+        .then(files => {
+          const userFilesDiv = document.getElementById('userFiles');
+          userFilesDiv.innerHTML = ''; // Clear previous files
+          if (files.length === 0) {
+            userFilesDiv.textContent = 'No files found';
+          } else {
+            files.forEach(file => {
+              const fileCard = createFileCard(file);
+              userFilesDiv.appendChild(fileCard);
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching user files:', error);
+        });
+
+      // Fetch shared files
+      fetch(`https://codecollabserver.onrender.com/api/users/${userid}/shared-files`, {
+        method: 'GET',
+        headers: headers
+      })
+        .then(response => response.json())
+        .then(files => {
+          const sharedFilesDiv = document.getElementById('sharedFiles');
+          sharedFilesDiv.innerHTML = ''; // Clear previous files
+          if (files.length === 0) {
+            sharedFilesDiv.textContent = 'No shared files found';
+          } else {
+            files.forEach(file => {
+              const fileCard = createFileCard(file);
+              sharedFilesDiv.appendChild(fileCard);
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching shared files:', error);
+        });
+    }
+
+    // Create a file card element
+    function createFileCard(file) {
+      const fileCard = document.createElement('div');
+      fileCard.classList.add('file-card');
+
+      const fileName = document.createElement('div');
+      fileName.classList.add('file-name');
+      fileName.textContent = file.fileName;
+
+      const buttonContainer = document.createElement('div');
+      buttonContainer.classList.add('button-container');
+
+      // Create a "View" button
+      const viewButton = document.createElement('button');
+      viewButton.textContent = 'View';
+      viewButton.addEventListener('click', () => {
+        window.open(file.fileUrl, '_blank');
       });
+
+      // Create an "Edit" button
+      const editButton = document.createElement('button');
+      editButton.textContent = 'Edit';
+      if (file.fileType === 'file') {
+        editButton.disabled = true;
+      } else {
+        viewButton.disabled = true;
+      }
+      editButton.addEventListener('click', () => {
+        // Add logic to edit the file content
+        window.location.href = `codeeditor.html?fileId=${file._id}`;
+      });
+
+      // Create a "Share" button
+      const shareButton = document.createElement('button');
+      shareButton.textContent = 'Share';
+      shareButton.addEventListener('click', () => {
+        // Fetch the list of friends and display it in a modal
+        fetchFriendsList(file._id);
+      });
+
+      buttonContainer.appendChild(viewButton);
+      buttonContainer.appendChild(editButton);
+      buttonContainer.appendChild(shareButton); // Add the "Share" button
+
+      fileCard.appendChild(fileName);
+      fileCard.appendChild(buttonContainer);
+
+      return fileCard;
+    }
+
+    // Function to fetch and display the list of friends
+    function fetchFriendsList(fileId) {
+      const friendsModal = document.getElementById('friendsModal');
+      const friendsList = document.getElementById('friendsList');
+      
+      // Replace 'your_token_here' with the actual authorization token
+      const token = localStorage.getItem('token');
+
+      fetch(`https://codecollabserver.onrender.com/api/users/${userid}/friends`, {
+        method: 'GET',
+        headers: {
+          'Authorization': token
+        }
+      })
+        .then(response => response.json())
+        .then(data => {
+          friendsList.innerHTML = ''; // Clear previous friend list
+          data.friends.forEach(friend => {
+            const friendItem = document.createElement('li');
+            friendItem.textContent = `${friend.name} (User ID: ${friend.userId})`;
+            friendItem.classList.add('friend-item');
+            friendItem.addEventListener('click', () => {
+              // Handle the click event for the friend
+              shareFileWithFriend(fileId, friend.userId);
+            });
+            friendsList.appendChild(friendItem);
+          });
+
+          // Display the modal
+          friendsModal.style.display = 'block';
+        })
+        .catch(error => {
+          console.error('Error fetching friends:', error);
+        });
+    }
+
+    function shareFileWithFriend(fileId, friendUserId) {
+      const token = localStorage.getItem('token');
+      console.log(fileId, friendUserId);
+
+      fetch(`https://codecollabserver.onrender.com/api/users/${friendUserId}/shared-files`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ fileId, friendUserId })
+      })
+        .then(response => response.json())
+        .then(data => {
+          // Handle success or error here
+          if (data.message) {
+            alert(data.message); // Display a success message or error message
+          }
+        })
+        .catch(error => {
+          console.error('Error sharing file with friend:', error);
+        });
+    }
+
+    // Close the modal when the 'x' button is clicked
+    const friendsModal = document.getElementById('friendsModal');
+    const closeBtn = document.querySelector('.close');
+    closeBtn.addEventListener('click', () => {
+      friendsModal.style.display = 'none';
+    });
+
+    // Fetch and display user's files and shared files
+    fetchAndDisplayFiles();
   </script>
 </body>
 </html>
